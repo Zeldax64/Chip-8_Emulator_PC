@@ -41,7 +41,7 @@ unsigned short stack[16];
 unsigned short sp;
 
 // HEX based keypad (0x0-0xF)
-unsigned char key[16];
+
 
 // Fontset
 unsigned char chip8_fontset[80] =
@@ -92,7 +92,7 @@ void cpu_initialize(){
 
 	// Clear Keypad
 	for(int i = 0; i < 16; i++){
-		key[i] = 0;
+		keypad[i] = 0;
 	}
 
 	// Load fontset
@@ -288,14 +288,14 @@ void emulateCycle(){
 		case 0xE000:
 			switch(opcode & 0x000F){
 				case 0x000E: // EX9E [KeyOp]: skips the next instruction if the key stored in VX is pressed
-					if(key[v[cpu_getXReg(opcode)]] == 1)
+					if(keypad[v[cpu_getXReg(opcode)]] == 1)
 						pc += 4;
 					else
 						pc += 2;
 				break;
 
 				case 0x001: // EXA1 [KeyOp]: skips the next instruction if the key stored in VX isn't pressed
-					if(key[v[cpu_getXReg(opcode)]] == 0)
+					if(keypad[v[cpu_getXReg(opcode)]] == 0)
 						pc += 4;
 					else
 						pc += 2;
@@ -316,7 +316,7 @@ void emulateCycle(){
 				case 0x000A:{ // FX0A [KeyOp]: a key press is awaited, and then stored in VX
 					bool keyPress = false;
 					for(int i = 0; i < 16; i++){
-						if(key[i] != 0){
+						if(keypad[i] != 0){
 							v[cpu_getXReg(opcode)] = i;
 							keyPress = true;
 						}
@@ -426,7 +426,6 @@ bool cpu_loadRom(char* filename){
 
 	if(result != lSize){
 		printf("Reading error\n");
-		printf("Result: %d\n", result);
 		return false;
 	}
 

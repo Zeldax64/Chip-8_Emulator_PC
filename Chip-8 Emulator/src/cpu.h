@@ -6,3 +6,5 @@
 void cpu_initialize();
 void cpu_loadGame();
 bool cpu_loadRom(char* file);
+
+unsigned char keypad[16];
