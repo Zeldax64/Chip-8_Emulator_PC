@@ -42,6 +42,28 @@ unsigned short sp;
 
 // HEX based keypad (0x0-0xF)
 unsigned char key[16];
+
+// Fontset
+unsigned char chip8_fontset[80] =
+{
+  0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+  0x20, 0x60, 0x20, 0x20, 0x70, // 1
+  0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+  0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+  0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+  0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+  0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+  0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+  0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+  0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+  0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+  0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+  0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+  0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+  0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+  0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+};
+
 // Check out for errors
 void cpu_initialize(){
 	pc  	= 0x200; // Program counter starts at 0x200
@@ -68,7 +90,15 @@ void cpu_initialize(){
 		v[i] = 0;
 	}
 
+	// Clear Keypad
+	for(int i = 0; i < 16; i++){
+		key[i] = 0;
+	}
+
 	// Load fontset
+	for(int i = 0; i < 0x200; i++){
+		memory[i] = chip8_fontset[i];
+	}
 
 	// Reset timers
 	srand(time(NULL));
@@ -77,16 +107,6 @@ void cpu_initialize(){
 
 	//Clear screen once
 	drawFlag = true;
-}
-
-void cpu_loadGame(){
-	// Example
-	unsigned char file[5];
-	unsigned filesize = 10;
-
-	for(int i = 0; i < filesize; i++)
-		memory[i+512] = file[i];
-
 }
 
 void emulateCycle(){
@@ -99,19 +119,19 @@ void emulateCycle(){
 		// Some opcodes
 		case 0x0000:
 			switch (opcode & 0x000F){
-			case 0x0000: // 0x00E0: Clears the screen
+				case 0x0000: // 0x00E0: Clears the screen
 				// Execute code
-			break;
+				break;
 
-			case 0x000E: // 0x00EE: Returns from subroutine
-				pc = stack[sp];
-				--sp;
-				pc += 2;
-			break;
+				case 0x000E: // 0x00EE: Returns from subroutine
+					pc = stack[sp];
+					--sp;
+					pc += 2;
+					break;
 
-			default:
-				printf("Unknown opcode [0x0000]: 0x%X\n", opcode);
-			}
+				default:
+					printf("Unknown opcode [0x0000]: 0x%X\n", opcode);
+				}
 		break;
 
 		case 0x1000: // 1NNN [Flow]: jumps to address NNN
@@ -268,11 +288,17 @@ void emulateCycle(){
 		case 0xE000:
 			switch(opcode & 0x000F){
 				case 0x000E: // EX9E [KeyOp]: skips the next instruction if the key stored in VX is pressed
-					// MISSING!
+					if(key[v[cpu_getXReg(opcode)]] == 1)
+						pc += 4;
+					else
+						pc += 2;
 				break;
 
 				case 0x001: // EXA1 [KeyOp]: skips the next instruction if the key stored in VX isn't pressed
-					// MISSING!
+					if(key[v[cpu_getXReg(opcode)]] == 0)
+						pc += 4;
+					else
+						pc += 2;
 				break;
 
 				default:
@@ -287,8 +313,20 @@ void emulateCycle(){
 					pc += 2;
 				break;
 
-				case 0x000A: // FX0A [KeyOp]: a key press is awaited, and then stored in VX
-					// MISSING!
+				case 0x000A:{ // FX0A [KeyOp]: a key press is awaited, and then stored in VX
+					bool keyPress = false;
+					for(int i = 0; i < 16; i++){
+						if(key[i] != 0){
+							v[cpu_getXReg(opcode)] = i;
+							keyPress = true;
+						}
+					}
+
+					if (!keyPress)
+						return;
+
+					pc += 2;
+				}
 				break;
 
 				case 0x0008: // FX18 [Sound]: sets the sound time to VX
@@ -302,7 +340,8 @@ void emulateCycle(){
 				break;
 
 				case 0x0009: // FX29 [Mem]: sets I to the location of the sprite for the character in VX
-					// MISSING!
+					I = v[cpu_getXReg(opcode)] * 5;
+					pc += 2;
 				break;
 
 				case 0x0003: // FX33 [BCD]: stores the BCD representation of VX ... (Check Wikipedia :D)
@@ -358,4 +397,49 @@ void emulateCycle(){
 		}
 		--sound_timer;
 	}
+}
+
+bool cpu_loadRom(char* filename){
+	cpu_initialize();
+	printf("Loading: %s\n", filename);
+
+	FILE* file = fopen(filename, "rb");
+	if(file == NULL){
+		printf("File error\n");
+		return false;
+	}
+
+	// Check file size
+	fseek(file, 0, SEEK_END);
+	long lSize = ftell(file);
+	rewind(file);
+	printf("Filesize: %d\n", (int)lSize);
+
+	char* buffer = (char*)malloc(sizeof(char) * lSize);
+	if (buffer == NULL){
+		printf("Memory error\n");
+		return false;
+	}
+
+	// Copy the file into the buffer
+	size_t result = fread(buffer, 1, lSize, file);
+
+	if(result != lSize){
+		printf("Reading error\n");
+		printf("Result: %d\n", result);
+		return false;
+	}
+
+	if(MEM_SIZE - 512 > lSize){
+		for(int i = 0; i < lSize; i++){
+			memory[i + 512] = buffer[i];
+		}
+	}
+
+	else
+		printf("Error: Rom too big for memory");
+
+	fclose(file);
+	free(buffer);
+	return true;
 }
