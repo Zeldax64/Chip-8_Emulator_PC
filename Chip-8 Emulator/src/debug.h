@@ -16,5 +16,7 @@ bool debug_loadApplication(const char * filename);
 unsigned char V[16];
 unsigned char buff[64 * 32];
 unsigned char debugKey[16];
-
+unsigned short debugI;
+unsigned char debugMemory[4096]; // Memory: 4k in total
+unsigned short debugI;
 #endif /* CHIP_8_EMULATOR_SRC_DEBUG_H_ */

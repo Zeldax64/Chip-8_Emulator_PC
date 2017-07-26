@@ -2,8 +2,6 @@
 
 /*----- Variables -----*/
 unsigned short opcode;			// Store current opcode
-unsigned char memory[MEM_SIZE]; // Memory: 4k in total
-unsigned short I;				// Index register 0x000 to 0xFFF
 unsigned short pc;				// Program counter
 
 unsigned char delay_timer;		// Timer registers (count at 60 Hz)
@@ -67,7 +65,7 @@ void cpu_initialize(){
 	}
 
 	// Load fontset
-	for(int i = 0; i < 0x200; i++){
+	for(int i = 0; i < 80; i++){
 		memory[i] = chip8_fontset[i];
 	}
 
@@ -86,8 +84,6 @@ unsigned short emulateCycle(){
 	// Fetch opcode
 	opcode = cpu_fetch(pc); // memory[pc] << 8 | memory[pc+1]
 
-	//printf("Opcode: %x\n", opcode);
-	//setvbuf (stdout, NULL, _IONBF, 0);
 	// Decode opcode
 	switch (opcode & 0xF000){
 		// Some opcodes

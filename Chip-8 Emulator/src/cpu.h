@@ -24,6 +24,8 @@ unsigned char gfx[64 * 32];		// Array for graphics 64 x 32
 unsigned char drawFlag;		// Flag for drawing
 unsigned char keypad[16];	// Keypad
 unsigned char v[16];			// CPU registers
+unsigned short I;				// Index register 0x000 to 0xFFF
+unsigned char memory[MEM_SIZE]; // Memory: 4k in total
 
 void cpu_initialize();
 unsigned short emulateCycle();

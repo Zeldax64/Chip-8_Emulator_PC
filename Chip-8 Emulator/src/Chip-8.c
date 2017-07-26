@@ -21,6 +21,7 @@ void keyboardUp(unsigned char key, int x, int y);
 int checkReg();
 bool checkGFX();
 int checkKey();
+int checkMem();
 
 bool checkGFX(){
 	for(int i = 0; i < 2048; ++i){
@@ -47,20 +48,29 @@ int checkKey(){
 	return -1;
 }
 
+int checkMem(){
+	for(int i = 0; i < MEM_SIZE; ++i){
+		 if(memory[i] != debugMemory[i]){
+			 return i;
+		 }
+	}
+	return -1;
+}
 
 int main(int argc, char **argv) {
 	//char* filename = "Z:\\Programas\\IDE\\Eclipse\\Workspace\\Chip-8_Emulator_PC\\Chip-8 Emulator\\src\\games\\pong2.c8";
 	//Z:\Programas\IDE\Eclipse\Workspace\Chip-8_Emulator_PC\Chip-8 Emulator\src\games
-  	char* filename = "C:\\Users\\caiox\\git\\Chip-8 Emulator\\src\\games\\pong2.c8";
-  	printf("Pong \n");
+    char* filename = "C:\\Users\\caiox\\git\\Chip-8 Emulator\\src\\games\\pong2.c8";
+
+    printf("Pong \n");
   	cpu_loadRom(filename);
 
-  	/*
+    /*
   	filename = "C:\\Users\\caiox\\git\\Chip-8 Emulator\\src\\games\\invaders.c8";
   	printf("Invaders \n");
   	cpu_loadRom(filename);
-	*/
-  	/*
+     */
+    /*
   	filename = "C:\\Users\\caiox\\git\\Chip-8 Emulator\\src\\games\\tetris.c8";
   	printf("Invaders \n");
   	cpu_loadRom(filename);
@@ -78,7 +88,8 @@ int main(int argc, char **argv) {
 	unsigned short debugOp;
 	int i = 0;
 
-	/*
+	keypad[0x4] = 1;
+	debugKey[0x4] = 1;
 	while(true){
 		i++;
 		prevOp = op;
@@ -99,29 +110,44 @@ int main(int argc, char **argv) {
 				v[reg] = V[reg];
 			}
 			else{
-				printf("Falha devido a registradores diferentes\n%d\n ", reg);
+				printf("Falha devido a registradores diferentes\nRegistrador: %d\n", reg);
+				printf("v[%d]: %d   V[%d]: %d\n", reg, v[reg], reg, V[reg]);
 				break;
 			}
 		}
 
 		if(!checkGFX()){
 			printf("Falha devido a GFX\n");
+			break;
 		}
 
-		int key;
-		key = checkKey();
-		if(key >= 0){
-			printf("Falha devido a Key: %d\n", key);
+		if(I != debugI){
+			printf("Falha devido a I\n");
+			printf("I: %d   DebugI: %d\n", I, debugI);unsigned short I;				// Index register 0x000 to 0xFFF
+			break;
 		}
+
+		int mem = checkMem();
+		if(mem >= 0){
+			printf("Falha devido a Mem\n");
+			printf("memory[%d] = %d   debugMemory[%d] = %d\n", mem, memory[mem], mem, debugMemory[mem]);
+			break;
+		}
+
+		printf("v[0]: %d   V[0]: %d\n", v[0], V[0]);
+		printf("v[0xa]: %d   V[0xa]: %d\n", v[0xa], V[0xa]);
+		printf("v[0xb]: %d   V[0xb]: %d\n", v[0xb], V[0xb]);
+
 	}
 
-
+	printf("v[0xa]: %d   V[0xa]: %d\n", v[0xa], V[0xa]);
+	printf("v[0xb]: %d   V[0xb]: %d\n", v[0xb], V[0xb]);
 	printf("%d Op: %x   DebugOP: %x\n", i, op, debugOp);
 	printf("prevOp %x\n", prevOp);
 	printf("prevDebugOp %x\n", prevDebugOp);
-	*/
-	// Open GL
 
+	// Open GL
+  	/*
 	glutInit(&argc, argv);
 	setUpOpenGL();
 
@@ -132,7 +158,7 @@ int main(int argc, char **argv) {
 	glutKeyboardFunc(keyboardDown);
 	glutKeyboardUpFunc(keyboardUp);
 	glutMainLoop();
-
+	*/
 	return 0;
 }
 

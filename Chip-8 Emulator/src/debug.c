@@ -6,13 +6,12 @@
 /*----- Debug Variables -----*/
 unsigned short debugPC;
 unsigned short debugOpcode;
-unsigned short debugI;
+
 
 unsigned char debugDelay_timer;
 unsigned char debugSound_timer;
 unsigned short debugStack[16];		// Stack and debugStack pointer
 unsigned short debugSP;
-unsigned char debugMemory[4096]; // Memory: 4k in total
 bool debugDrawFlag;
 
 unsigned char debugchip8_fontset[80] =
