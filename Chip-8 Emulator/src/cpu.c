@@ -1,46 +1,17 @@
 #include "cpu.h"
 
+/*----- Variables -----*/
+unsigned short opcode;			// Store current opcode
+unsigned char memory[MEM_SIZE]; // Memory: 4k in total
+unsigned short I;				// Index register 0x000 to 0xFFF
+unsigned short pc;				// Program counter
 
-#define MEM_SIZE 4096
-
-#define vF v[0xF]
-/*----- Macros -----*/
-#define cpu_fetch() (memory[pc] << 8 | memory[pc+1])
-
-#define cpu_getXReg(op) (((op) & 0x0F00) >> 8)
-#define cpu_getYReg(op) (((op) & 0x00F0) >> 4)
-
-#define cpu_getN(op) ((op) & 0x000F)
-#define cpu_getNN(op) ((op) & 0x00FF)
-#define cpu_getNNN(op) ((op) & 0x0FFF)
-
-// Store current opcode
-unsigned short opcode;
-
-// Memory: 4k in total
-unsigned char memory[MEM_SIZE];
-
-// CPU registers
-unsigned char v[16];
-
-// Index register 0x000 to 0xFFF
-unsigned short I;
-// Program counter
-unsigned short pc;
-
-// Array for graphics 64 x 32
-unsigned char gfx[64 * 32];
-unsigned char drawFlag;
-
-// Timer registers (count at 60 Hz)
-unsigned char delay_timer;
+unsigned char delay_timer;		// Timer registers (count at 60 Hz)
 unsigned char sound_timer;
 
-// Stack and stack pointer
-unsigned short stack[16];
+unsigned short stack[16];		// Stack and stack pointer
 unsigned short sp;
 
-// HEX based keypad (0x0-0xF)
 
 
 // Fontset
@@ -69,7 +40,7 @@ void cpu_initialize(){
 	pc  	= 0x200; // Program counter starts at 0x200
 	opcode  = 0;	 // Reset current opcode
 	I 		= 0;	 // Reset index register
-	sp 		= 0;	 // Reset stackpointer
+	sp 		= 0;	 // Reset stack pointer
 
 	// Clear display
 	for(int i = 0; i < 2048; i++){
@@ -101,41 +72,49 @@ void cpu_initialize(){
 	}
 
 	// Reset timers
-	srand(time(NULL));
 	delay_timer = 0;
 	sound_timer = 0;
 
 	//Clear screen once
 	drawFlag = true;
+
+	// Random
+	srand(time(NULL));
 }
 
-void emulateCycle(){
-
+unsigned short emulateCycle(){
 	// Fetch opcode
-	opcode = cpu_fetch(); // memory[pc] << 8 | memory[pc+1]
+	opcode = cpu_fetch(pc); // memory[pc] << 8 | memory[pc+1]
 
+	//printf("Opcode: %x\n", opcode);
+	//setvbuf (stdout, NULL, _IONBF, 0);
 	// Decode opcode
 	switch (opcode & 0xF000){
 		// Some opcodes
 		case 0x0000:
 			switch (opcode & 0x000F){
 				case 0x0000: // 0x00E0: Clears the screen
-				// Execute code
+					for(int i = 0; i < 2048; i++){
+						gfx[i] = 0;
+					}
+					drawFlag = true;
+					pc += 2;
 				break;
 
 				case 0x000E: // 0x00EE: Returns from subroutine
-					pc = stack[sp];
 					--sp;
+					pc = stack[sp];
 					pc += 2;
 					break;
 
 				default:
-					printf("Unknown opcode [0x0000]: 0x%X\n", opcode);
+					printf("Unknown opcode: 0x%X\n", opcode);
+					printf("PC: %x\n", pc);
 				}
 		break;
 
 		case 0x1000: // 1NNN [Flow]: jumps to address NNN
-			pc = opcode | 0x0FFF;
+			pc = cpu_getNNN(opcode);
 		break;
 
 		case 0x2000:
@@ -145,7 +124,7 @@ void emulateCycle(){
 		break;
 
 		case 0x3000: // 3XNN [Cond]: skips the next instruction if VX equals NN
-			if(v[cpu_getXReg(opcode)] == v[cpu_getNN(opcode)])
+			if(v[cpu_getXReg(opcode)] == cpu_getNN(opcode))
 				pc +=4;
 			else
 				pc +=2;
@@ -193,7 +172,7 @@ void emulateCycle(){
 				break;
 
 				case 0x0003: // 8XY3 [BitOp]: sets VX to VX xor VY. (Bitwise XOR operation)
-					v[cpu_getXReg(opcode)] ^= v[cpu_getXReg(opcode)];
+					v[cpu_getXReg(opcode)] ^= v[cpu_getYReg(opcode)];
 					pc += 2;
 				break;
 
@@ -203,6 +182,7 @@ void emulateCycle(){
 					else
 						v[0xF] = 0;
 					v[cpu_getXReg(opcode)] += v[cpu_getYReg(opcode)]; //VX += Vy
+					pc += 2;
 				break;
 
 				case 0x0005: // 8XY5 [Math]: VY is subtracted from VX. VF is set to 0 when there's a borrow, and to 1 when there isn't
@@ -215,10 +195,7 @@ void emulateCycle(){
 				break;
 
 				case 0x0006: // 8XY6 [Math]: shifts VX right by one. VF is set to the value of the LSB of VX before the shift
-					if((v[cpu_getXReg(opcode)] % 2) == 1)
-						vF = 1;
-					else
-						vF = 0;
+					vF = v[cpu_getXReg(opcode)] & 0x1;
 					v[cpu_getXReg(opcode)] = v[cpu_getXReg(opcode)] >> 1;
 					pc += 2;
 				break;
@@ -228,11 +205,12 @@ void emulateCycle(){
 						vF = 0;
 					else
 						vF = 1;
-					v[cpu_getXReg(opcode)] -= v[cpu_getYReg(opcode)];
+					v[cpu_getXReg(opcode)] = v[cpu_getYReg(opcode)] - v[cpu_getXReg(opcode)];
 					pc += 2;
 				break;
 
 				case 0x000E: // 8XYE [BitOp]: shifts VX left by one. VF is set to the value of the MSB of VX before the shift
+					vF = v[cpu_getXReg(opcode)] >> 7;
 					v[cpu_getXReg(opcode)] = v[cpu_getXReg(opcode)] << 1;
 					pc += 2;
 				break;
@@ -264,7 +242,7 @@ void emulateCycle(){
 		{
 			unsigned short x = v[cpu_getXReg(opcode)];
 			unsigned short y = v[cpu_getYReg(opcode)];
-			unsigned short height = v[cpu_getN(opcode)];
+			unsigned short height = cpu_getN(opcode);
 			unsigned short pixel;
 
 			vF = 0;
@@ -288,7 +266,7 @@ void emulateCycle(){
 		case 0xE000:
 			switch(opcode & 0x000F){
 				case 0x000E: // EX9E [KeyOp]: skips the next instruction if the key stored in VX is pressed
-					if(keypad[v[cpu_getXReg(opcode)]] == 1)
+					if(keypad[v[cpu_getXReg(opcode)]] != 1)
 						pc += 4;
 					else
 						pc += 2;
@@ -333,7 +311,7 @@ void emulateCycle(){
 					sound_timer = v[cpu_getXReg(opcode)];
 					pc += 2;
 				break;
-
+				// Diferente
 				case 0x000E: // FX1E [Mem]: adds VX to I
 					I += v[cpu_getXReg(opcode)];
 					pc += 2;
@@ -353,13 +331,13 @@ void emulateCycle(){
 
 				case 0x0005:
 					switch(opcode & 0x00F0){
-						case 0x0010: // FX07 [Timer]: sets VX to the value of the delay timer
+						case 0x0010: // FX15 [Timer]: sets VX to the value of the delay timer
 							delay_timer = v[cpu_getXReg(opcode)];
 							pc += 2;
 						break;
 
 						case 0x0050: // FX55 [Mem]: stores V0 to VX (including VX) in memory starting at address I
-							for(int i = 0; i < cpu_getXReg(opcode); i++){
+							for(int i = 0; i <= cpu_getXReg(opcode); i++){
 								memory[I + i] = v[i];
 							}
 							I += cpu_getXReg(opcode) +1;
@@ -397,6 +375,8 @@ void emulateCycle(){
 		}
 		--sound_timer;
 	}
+
+	return opcode;
 }
 
 bool cpu_loadRom(char* filename){
