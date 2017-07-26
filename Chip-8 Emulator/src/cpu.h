@@ -27,7 +27,7 @@ unsigned char v[16];			// CPU registers
 
 void cpu_initialize();
 unsigned short emulateCycle();
-void cpu_loadGame();
+void debugRender();
 bool cpu_loadRom(char* file);
 
 

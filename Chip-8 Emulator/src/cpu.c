@@ -108,7 +108,6 @@ unsigned short emulateCycle(){
 					break;
 
 				default:
-					printf("Unknown opcode: 0x%X\n", opcode);
 					printf("PC: %x\n", pc);
 				}
 		break;
@@ -266,7 +265,7 @@ unsigned short emulateCycle(){
 		case 0xE000:
 			switch(opcode & 0x000F){
 				case 0x000E: // EX9E [KeyOp]: skips the next instruction if the key stored in VX is pressed
-					if(keypad[v[cpu_getXReg(opcode)]] != 1)
+					if(keypad[v[cpu_getXReg(opcode)]] == 1)
 						pc += 4;
 					else
 						pc += 2;
@@ -371,12 +370,25 @@ unsigned short emulateCycle(){
 
 	if (sound_timer > 0){
 		if(sound_timer == 1){
-			printf("Beep!\n");
+			//printf("Beep!\n");
 		}
 		--sound_timer;
 	}
 
 	return opcode;
+}
+
+void debugRender(){
+	for(int y = 0; y < 32; ++y){
+		for(int x = 0; x < 64; ++x){
+			if(gfx[(y*64) + x] == 0)
+				printf("O");
+			else
+				printf(" ");
+		}
+		printf("\n");
+	}
+	printf("\n\n------------------------------\n\n");
 }
 
 bool cpu_loadRom(char* filename){

@@ -7,11 +7,9 @@
 unsigned short debugPC;
 unsigned short debugOpcode;
 unsigned short debugI;
-unsigned char debugKey[16];
 
 unsigned char debugDelay_timer;
 unsigned char debugSound_timer;
-unsigned char buff[64 * 32];
 unsigned short debugStack[16];		// Stack and debugStack pointer
 unsigned short debugSP;
 unsigned char debugMemory[4096]; // Memory: 4k in total
