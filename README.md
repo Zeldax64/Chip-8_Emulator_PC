@@ -1,2 +1,2 @@
-# Chip-8_Emulator_PC
-Chip-8 Emulator
+# Chip-8 Interpreter PC
+Chip-8 Interpreter
