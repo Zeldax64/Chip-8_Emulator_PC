@@ -28,8 +28,7 @@ unsigned short I;				// Index register 0x000 to 0xFFF
 unsigned char memory[MEM_SIZE]; // Memory: 4k in total
 
 void cpu_initialize();
-unsigned short emulateCycle();
-void debugRender();
+void emulateCycle();
 bool cpu_loadRom(char* file);
 
 

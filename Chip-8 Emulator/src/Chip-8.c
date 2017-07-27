@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include "cpu.h"
 #include <stdbool.h>
-#include "debug.h"
 
 #include <GL/glut.h>
 // http://www.multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/
@@ -10,6 +9,7 @@
 #define MODIFIER 10
 int display_width = SCREEN_WIDTH * MODIFIER;
 int display_height = SCREEN_HEIGHT * MODIFIER;
+char* filename;
 
 void setUpOpenGL();
 void updateScreen();
@@ -17,137 +17,13 @@ void display();
 void reshapeWindow(GLsizei w, GLsizei h);
 void keyboardDown(unsigned char key, int x, int y);
 void keyboardUp(unsigned char key, int x, int y);
-
-int checkReg();
-bool checkGFX();
-int checkKey();
-int checkMem();
-
-bool checkGFX(){
-	for(int i = 0; i < 2048; ++i){
-		if(gfx[i] != buff[i])
-			return false;
-	}
-	return true;
-}
-
-int checkReg(){
-	for(int i = 0; i < 16; ++i){
-		if(v[i] != V[i])
-			return i;
-	}
-	return -1;
-}
-
-
-int checkKey(){
-	for(int i = 0; i < 16; ++i){
-		if(keypad[i] != debugKey[i])
-			return i;
-	}
-	return -1;
-}
-
-int checkMem(){
-	for(int i = 0; i < MEM_SIZE; ++i){
-		 if(memory[i] != debugMemory[i]){
-			 return i;
-		 }
-	}
-	return -1;
-}
+void keyboardSpecial(int key, int x, int y);
 
 int main(int argc, char **argv) {
-	//char* filename = "Z:\\Programas\\IDE\\Eclipse\\Workspace\\Chip-8_Emulator_PC\\Chip-8 Emulator\\src\\games\\pong2.c8";
-	//Z:\Programas\IDE\Eclipse\Workspace\Chip-8_Emulator_PC\Chip-8 Emulator\src\games
-    char* filename = "C:\\Users\\caiox\\git\\Chip-8 Emulator\\src\\games\\pong2.c8";
+	filename = argv[1];
+	cpu_loadRom(argv[1]);
 
-    printf("Pong \n");
-  	cpu_loadRom(filename);
-
-    /*
-  	filename = "C:\\Users\\caiox\\git\\Chip-8 Emulator\\src\\games\\invaders.c8";
-  	printf("Invaders \n");
-  	cpu_loadRom(filename);
-     */
-    /*
-  	filename = "C:\\Users\\caiox\\git\\Chip-8 Emulator\\src\\games\\tetris.c8";
-  	printf("Invaders \n");
-  	cpu_loadRom(filename);
-  	*/
-
-	cpu_loadRom(filename);
-	if(!debug_loadApplication(filename)){
-		printf("debugLoad Falhou");
-		return 0;
-	}
-
-	unsigned short prevOp;
-	unsigned short prevDebugOp;
-	unsigned short op;
-	unsigned short debugOp;
-	int i = 0;
-
-	keypad[0x4] = 1;
-	debugKey[0x4] = 1;
-	while(true){
-		i++;
-		prevOp = op;
-		prevDebugOp = debugOp;
-		op = emulateCycle();
-		debugOp = debug_emulateCycle();
-		printf("%d - Opcode: %x   DebugOpcode: %x\n", i, op, debugOp);
-		if(op != debugOp){
-			printf("Falha devido a opcodes diferentes\n");
-			printf("%d Op: %x   DebugOP: %x\n", i, op, debugOp);
-			break;
-		}
-
-		int reg;
-		reg = checkReg();
-		if(reg >= 0){ // Falha no registrador
-			if((op & 0xF000) == 0xC000){ //Se falha devido a random
-				v[reg] = V[reg];
-			}
-			else{
-				printf("Falha devido a registradores diferentes\nRegistrador: %d\n", reg);
-				printf("v[%d]: %d   V[%d]: %d\n", reg, v[reg], reg, V[reg]);
-				break;
-			}
-		}
-
-		if(!checkGFX()){
-			printf("Falha devido a GFX\n");
-			break;
-		}
-
-		if(I != debugI){
-			printf("Falha devido a I\n");
-			printf("I: %d   DebugI: %d\n", I, debugI);unsigned short I;				// Index register 0x000 to 0xFFF
-			break;
-		}
-
-		int mem = checkMem();
-		if(mem >= 0){
-			printf("Falha devido a Mem\n");
-			printf("memory[%d] = %d   debugMemory[%d] = %d\n", mem, memory[mem], mem, debugMemory[mem]);
-			break;
-		}
-
-		printf("v[0]: %d   V[0]: %d\n", v[0], V[0]);
-		printf("v[0xa]: %d   V[0xa]: %d\n", v[0xa], V[0xa]);
-		printf("v[0xb]: %d   V[0xb]: %d\n", v[0xb], V[0xb]);
-
-	}
-
-	printf("v[0xa]: %d   V[0xa]: %d\n", v[0xa], V[0xa]);
-	printf("v[0xb]: %d   V[0xb]: %d\n", v[0xb], V[0xb]);
-	printf("%d Op: %x   DebugOP: %x\n", i, op, debugOp);
-	printf("prevOp %x\n", prevOp);
-	printf("prevDebugOp %x\n", prevDebugOp);
-
-	// Open GL
-  	/*
+	// Open GL //
 	glutInit(&argc, argv);
 	setUpOpenGL();
 
@@ -157,8 +33,8 @@ int main(int argc, char **argv) {
 	glutIdleFunc(display);
 	glutKeyboardFunc(keyboardDown);
 	glutKeyboardUpFunc(keyboardUp);
+	glutSpecialFunc(keyboardSpecial);
 	glutMainLoop();
-	*/
 	return 0;
 }
 
@@ -299,4 +175,8 @@ void keyboardUp(unsigned char key, int x, int y)
 	else if(key == 'c')	keypad[0xB] = 0;
 	else if(key == 'v')	keypad[0xF] = 0;
 	//printf("Unpressed key %c\n", key);
+}
+
+void keyboardSpecial(int key, int x, int y){
+	if(key == GLUT_KEY_F1) cpu_loadRom(filename);
 }

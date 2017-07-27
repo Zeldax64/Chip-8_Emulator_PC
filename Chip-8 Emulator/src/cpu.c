@@ -80,7 +80,7 @@ void cpu_initialize(){
 	srand(time(NULL));
 }
 
-unsigned short emulateCycle(){
+void emulateCycle(){
 	// Fetch opcode
 	opcode = cpu_fetch(pc); // memory[pc] << 8 | memory[pc+1]
 
@@ -308,6 +308,10 @@ unsigned short emulateCycle(){
 				break;
 				// Diferente
 				case 0x000E: // FX1E [Mem]: adds VX to I
+					if(I + v[cpu_getXReg(opcode)] > 0xFFF)	// VF is set to 1 when range overflow (debugI+VX>0xFFF), and 0 when there isn't.
+						v[0xF] = 1;
+					else
+						v[0xF] = 0;
 					I += v[cpu_getXReg(opcode)];
 					pc += 2;
 				break;
@@ -340,7 +344,7 @@ unsigned short emulateCycle(){
 						break;
 
 						case 0x0060: // FX65 [Mem]: fills V0 to VX (including VX) with values from memory starting at address I
-							for(int i = 0; i < cpu_getXReg(opcode); i++){
+							for(int i = 0; i <= cpu_getXReg(opcode); i++){
 								v[i] = memory[I + i];
 							}
 							I += cpu_getXReg(opcode) + 1;
@@ -371,20 +375,7 @@ unsigned short emulateCycle(){
 		--sound_timer;
 	}
 
-	return opcode;
-}
-
-void debugRender(){
-	for(int y = 0; y < 32; ++y){
-		for(int x = 0; x < 64; ++x){
-			if(gfx[(y*64) + x] == 0)
-				printf("O");
-			else
-				printf(" ");
-		}
-		printf("\n");
-	}
-	printf("\n\n------------------------------\n\n");
+	return;
 }
 
 bool cpu_loadRom(char* filename){
