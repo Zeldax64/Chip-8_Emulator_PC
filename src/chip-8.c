@@ -11,6 +11,7 @@ int display_width = SCREEN_WIDTH * MODIFIER;
 int display_height = SCREEN_HEIGHT * MODIFIER;
 char* filename;
 
+void main_cycle();
 void setUpOpenGL();
 void updateScreen();
 void display();
@@ -30,7 +31,7 @@ int main(int argc, char **argv) {
 
 	//glutReshapeFunc(reshapeWindow);
 	glutDisplayFunc(display);
-	glutIdleFunc(display);
+	glutIdleFunc(main_cycle);
 	glutKeyboardFunc(keyboardDown);
 	glutKeyboardUpFunc(keyboardUp);
 	glutSpecialFunc(keyboardSpecial);
@@ -77,7 +78,7 @@ void updateScreen(){
 	}
 }
 
-void display(){
+void main_cycle() {
 	emulateCycle();
 	/*
 	if(drawFlag){
@@ -87,11 +88,18 @@ void display(){
 	}
 	*/
 	if(drawFlag){
-		glClear(GL_COLOR_BUFFER_BIT);
+		glutPostRedisplay();
 	}
+	
+}
 
-	updateScreen();
 
+void display(){
+
+	if(drawFlag){
+		glClear(GL_COLOR_BUFFER_BIT);
+		updateScreen();
+	}
 	glutSwapBuffers();
 	drawFlag = false;
 }
